@@ -1,0 +1,195 @@
+{
+  "title": "Pinnacle Financial Analytics",
+  "variables": [
+    {
+      "id": "segment",
+      "label": "Client Segment",
+      "type": "selection",
+      "options": ["Institutional", "Family Office", "Individual"]
+    }
+  ],
+  "collections": [
+    {
+      "id": "profitability-insight",
+      "type": "highlight",
+      "label": "Net income trending upward — January posted the strongest margin at +56% on $2.1M revenue",
+      "widgetIds": ["net-income-kpi", "pl-trend"]
+    }
+  ],
+  "widgets": {
+    "total-revenue-kpi": {
+      "id": "total-revenue-kpi",
+      "type": "scorecard",
+      "title": "Total Revenue",
+      "source": {
+        "sql": "WITH monthly AS (SELECT d.YEAR_NUMBER, d.MONTH_NUMBER, SUM(r.REVENUE_AMOUNT) AS rev FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_DATE d ON r.DATE_KEY = d.DATE_KEY GROUP BY d.YEAR_NUMBER, d.MONTH_NUMBER), ranked AS (SELECT rev, ROW_NUMBER() OVER (ORDER BY YEAR_NUMBER DESC, MONTH_NUMBER DESC) AS rn FROM monthly) SELECT (SELECT TO_VARCHAR(SUM(REVENUE_AMOUNT), '$999,999,999') FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE) AS VALUE, CONCAT(CASE WHEN (SELECT rev FROM ranked WHERE rn = 1) >= (SELECT rev FROM ranked WHERE rn = 2) THEN '+' ELSE '' END, ROUND(((SELECT rev FROM ranked WHERE rn = 1) - (SELECT rev FROM ranked WHERE rn = 2)) / (SELECT rev FROM ranked WHERE rn = 2) * 100, 1), '% MoM') AS DIFF"
+      },
+      "valueColumn": "VALUE",
+      "diffColumn": "DIFF",
+      "note": "Jul 2025 – Jan 2026"
+    },
+    "total-expenses-kpi": {
+      "id": "total-expenses-kpi",
+      "type": "scorecard",
+      "title": "Total Expenses",
+      "source": {
+        "sql": "WITH monthly AS (SELECT d.YEAR_NUMBER, d.MONTH_NUMBER, SUM(e.EXPENSE_AMOUNT) AS exp FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE e JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_DATE d ON e.DATE_KEY = d.DATE_KEY GROUP BY d.YEAR_NUMBER, d.MONTH_NUMBER), ranked AS (SELECT exp, ROW_NUMBER() OVER (ORDER BY YEAR_NUMBER DESC, MONTH_NUMBER DESC) AS rn FROM monthly) SELECT (SELECT TO_VARCHAR(SUM(EXPENSE_AMOUNT), '$999,999,999') FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE) AS VALUE, CONCAT(CASE WHEN (SELECT exp FROM ranked WHERE rn = 1) >= (SELECT exp FROM ranked WHERE rn = 2) THEN '+' ELSE '' END, ROUND(((SELECT exp FROM ranked WHERE rn = 1) - (SELECT exp FROM ranked WHERE rn = 2)) / (SELECT exp FROM ranked WHERE rn = 2) * 100, 1), '% MoM') AS DIFF"
+      },
+      "valueColumn": "VALUE",
+      "diffColumn": "DIFF",
+      "note": "Jul 2025 – Jan 2026"
+    },
+    "net-income-kpi": {
+      "id": "net-income-kpi",
+      "type": "scorecard",
+      "title": "Net Income",
+      "source": {
+        "sql": "SELECT TO_VARCHAR((SELECT SUM(REVENUE_AMOUNT) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE) - (SELECT SUM(EXPENSE_AMOUNT) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE), '$999,999,999') AS VALUE, CONCAT(ROUND(((SELECT SUM(REVENUE_AMOUNT) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE) - (SELECT SUM(EXPENSE_AMOUNT) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE)) / (SELECT SUM(REVENUE_AMOUNT) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE) * 100, 1), '% margin') AS DIFF"
+      },
+      "valueColumn": "VALUE",
+      "diffColumn": "DIFF",
+      "note": "Profit Margin"
+    },
+    "active-clients-kpi": {
+      "id": "active-clients-kpi",
+      "type": "scorecard",
+      "title": "Active Clients",
+      "source": {
+        "sql": "SELECT (SELECT COUNT(*) FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_CLIENT WHERE IS_ACTIVE = TRUE)::VARCHAR AS VALUE, CONCAT('$', TO_VARCHAR(ROUND(SUM(r.AUM_AMOUNT) / 1e9, 1)), 'B AUM') AS DIFF FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r"
+      },
+      "valueColumn": "VALUE",
+      "diffColumn": "DIFF",
+      "note": "Total Assets Under Management"
+    },
+    "pl-trend": {
+      "id": "pl-trend",
+      "type": "chart",
+      "title": "Monthly P&L Trend",
+      "source": {
+        "sql": "WITH monthly_rev AS (SELECT d.YEAR_NUMBER, d.MONTH_NUMBER, SUM(r.REVENUE_AMOUNT) AS amount FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_DATE d ON r.DATE_KEY = d.DATE_KEY GROUP BY d.YEAR_NUMBER, d.MONTH_NUMBER), monthly_exp AS (SELECT d.YEAR_NUMBER, d.MONTH_NUMBER, SUM(e.EXPENSE_AMOUNT) AS amount FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE e JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_DATE d ON e.DATE_KEY = d.DATE_KEY GROUP BY d.YEAR_NUMBER, d.MONTH_NUMBER), combined AS (SELECT r.YEAR_NUMBER, r.MONTH_NUMBER, r.YEAR_NUMBER::VARCHAR || '-' || LPAD(r.MONTH_NUMBER::VARCHAR, 2, '0') || '-01' AS MONTH, r.amount AS REVENUE, COALESCE(x.amount, 0) AS EXPENSES, r.amount - COALESCE(x.amount, 0) AS NET_INCOME FROM monthly_rev r LEFT JOIN monthly_exp x ON r.YEAR_NUMBER = x.YEAR_NUMBER AND r.MONTH_NUMBER = x.MONTH_NUMBER) SELECT MONTH, 'Revenue' AS METRIC, REVENUE AS AMOUNT FROM combined UNION ALL SELECT MONTH, 'Expenses' AS METRIC, EXPENSES AS AMOUNT FROM combined UNION ALL SELECT MONTH, 'Net Income' AS METRIC, NET_INCOME AS AMOUNT FROM combined ORDER BY MONTH, METRIC"
+      },
+      "vega": {
+        "mark": {"type": "line", "point": true},
+        "encoding": {
+          "x": {"field": "MONTH", "type": "temporal", "title": "Month", "axis": {"format": "%b %Y"}},
+          "y": {"field": "AMOUNT", "type": "quantitative", "title": "Amount ($)", "axis": {"format": "$,.0f"}},
+          "color": {
+            "field": "METRIC",
+            "type": "nominal",
+            "title": "Metric",
+            "scale": {
+              "domain": ["Revenue", "Expenses", "Net Income"],
+              "range": ["#2E86C1", "#E74C3C", "#27AE60"]
+            }
+          },
+          "strokeDash": {
+            "field": "METRIC",
+            "type": "nominal",
+            "scale": {
+              "domain": ["Revenue", "Expenses", "Net Income"],
+              "range": [[0], [0], [4, 4]]
+            },
+            "legend": null
+          }
+        }
+      }
+    },
+    "revenue-by-segment": {
+      "id": "revenue-by-segment",
+      "type": "chart",
+      "title": "Revenue by Client Segment",
+      "source": {
+        "sql": "SELECT c.CLIENT_SEGMENT AS SEGMENT, ROUND(SUM(r.REVENUE_AMOUNT), 0) AS REVENUE FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_CLIENT c ON r.CLIENT_KEY = c.CLIENT_KEY GROUP BY c.CLIENT_SEGMENT ORDER BY REVENUE DESC"
+      },
+      "filters": [
+        {"column": "SEGMENT", "variableId": "segment"}
+      ],
+      "vega": {
+        "mark": "bar",
+        "encoding": {
+          "x": {"field": "SEGMENT", "type": "nominal", "title": "Client Segment", "sort": "-y"},
+          "y": {"field": "REVENUE", "type": "quantitative", "title": "Revenue ($)", "axis": {"format": "$,.0f"}},
+          "color": {
+            "field": "SEGMENT",
+            "type": "nominal",
+            "scale": {
+              "domain": ["Institutional", "Family Office", "Individual"],
+              "range": ["#2E86C1", "#F39C12", "#27AE60"]
+            },
+            "legend": null
+          }
+        }
+      }
+    },
+    "revenue-by-product": {
+      "id": "revenue-by-product",
+      "type": "chart",
+      "title": "Revenue by Product Category",
+      "source": {
+        "sql": "SELECT p.PRODUCT_CATEGORY AS CATEGORY, ROUND(SUM(r.REVENUE_AMOUNT), 0) AS REVENUE, ROUND(AVG(r.FEE_BASIS_POINTS), 1) AS AVG_BPS FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_PRODUCT p ON r.PRODUCT_KEY = p.PRODUCT_KEY GROUP BY p.PRODUCT_CATEGORY ORDER BY REVENUE DESC"
+      },
+      "vega": {
+        "mark": "bar",
+        "encoding": {
+          "x": {"field": "CATEGORY", "type": "nominal", "title": "Product Category", "sort": "-y"},
+          "y": {"field": "REVENUE", "type": "quantitative", "title": "Revenue ($)", "axis": {"format": "$,.0f"}},
+          "color": {
+            "field": "CATEGORY",
+            "type": "nominal",
+            "scale": {
+              "domain": ["Performance Fee", "Management Fee", "Advisory Fee"],
+              "range": ["#8E44AD", "#2E86C1", "#16A085"]
+            },
+            "legend": null
+          },
+          "tooltip": [
+            {"field": "CATEGORY", "type": "nominal", "title": "Category"},
+            {"field": "REVENUE", "type": "quantitative", "title": "Revenue", "format": "$,.0f"},
+            {"field": "AVG_BPS", "type": "quantitative", "title": "Avg Basis Points"}
+          ]
+        }
+      }
+    },
+    "top-expenses": {
+      "id": "top-expenses",
+      "type": "chart",
+      "title": "Top 10 Expense Categories",
+      "source": {
+        "sql": "SELECT ec.EXPENSE_CATEGORY_NAME AS CATEGORY, ROUND(SUM(e.EXPENSE_AMOUNT), 0) AS AMOUNT FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_EXPENSE e JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_EXPENSE_CATEGORY ec ON e.EXPENSE_CATEGORY_KEY = ec.EXPENSE_CATEGORY_KEY GROUP BY ec.EXPENSE_CATEGORY_NAME ORDER BY AMOUNT DESC LIMIT 10"
+      },
+      "vega": {
+        "mark": "bar",
+        "encoding": {
+          "y": {"field": "CATEGORY", "type": "nominal", "title": "Expense Category", "sort": "-x"},
+          "x": {"field": "AMOUNT", "type": "quantitative", "title": "Amount ($)", "axis": {"format": "$,.0f"}},
+          "color": {"value": "#E74C3C"}
+        }
+      }
+    },
+    "client-profitability": {
+      "id": "client-profitability",
+      "type": "table",
+      "title": "Client Profitability",
+      "source": {
+        "sql": "SELECT c.CLIENT_NAME, c.CLIENT_SEGMENT, c.AUM_TIER, TO_VARCHAR(ROUND(SUM(r.REVENUE_AMOUNT), 0), '$999,999,999') AS TOTAL_REVENUE, TO_VARCHAR(ROUND(SUM(r.AUM_AMOUNT) / 1e6, 1), '999,999.0') AS AUM_MILLIONS, ROUND(AVG(r.FEE_BASIS_POINTS), 1) AS AVG_BPS FROM PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.FACT_REVENUE r JOIN PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS.DIM_CLIENT c ON r.CLIENT_KEY = c.CLIENT_KEY GROUP BY c.CLIENT_NAME, c.CLIENT_SEGMENT, c.AUM_TIER ORDER BY SUM(r.REVENUE_AMOUNT) DESC"
+      },
+      "filters": [
+        {"column": "CLIENT_SEGMENT", "variableId": "segment"}
+      ],
+      "columns": ["CLIENT_NAME", "CLIENT_SEGMENT", "AUM_TIER", "TOTAL_REVENUE", "AUM_MILLIONS", "AVG_BPS"]
+    }
+  },
+  "layout": {
+    "default": [
+      {"i": "total-revenue-kpi", "x": 0, "y": 0, "w": 3, "h": 2},
+      {"i": "total-expenses-kpi", "x": 3, "y": 0, "w": 3, "h": 2},
+      {"i": "net-income-kpi", "x": 6, "y": 0, "w": 3, "h": 2},
+      {"i": "active-clients-kpi", "x": 9, "y": 0, "w": 3, "h": 2},
+      {"i": "pl-trend", "x": 0, "y": 2, "w": 8, "h": 4},
+      {"i": "revenue-by-segment", "x": 8, "y": 2, "w": 4, "h": 4},
+      {"i": "revenue-by-product", "x": 0, "y": 6, "w": 6, "h": 4},
+      {"i": "top-expenses", "x": 6, "y": 6, "w": 6, "h": 4},
+      {"i": "client-profitability", "x": 0, "y": 10, "w": 12, "h": 4}
+    ]
+  }
+}

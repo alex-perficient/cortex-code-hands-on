@@ -1,0 +1,152 @@
+1. ASCII Art Version
+
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║                        DATA SOURCES (Existing)                         ║
+    ║                                                                        ║
+    ║  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐        ║
+    ║  │  Advent Geneva   │  │    NetSuite     │  │  Salesforce FSC │        ║
+    ║  │  Portfolio Acctg │  │  General Ledger │  │       CRM       │        ║
+    ║  │  NAV, AUM, Txns  │  │  GL, AP/AR, Rev │  │  Clients, AUM  │        ║
+    ║  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘        ║
+    ╚═══════════╪═════════════════════╪═════════════════════╪════════════════╝
+                │ SFTP batch          │ API sync            │ CDC stream
+                │ Daily 6AM ET        │ Every 4 hrs         │ Near real-time
+                │ ~15 min             │ ~30 min             │ ~5 min
+    ╔═══════════╪═════════════════════╪═════════════════════╪════════════════╗
+    ║           ▼  INGESTION LAYER (New)  ▼                 ▼               ║
+    ║  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐       ║
+    ║  │ Geneva Connector │  │NetSuite Connect.│  │  SF Connector   │       ║
+    ║  │   SFTP Extract   │  │  Snowflake API  │  │   CDC-Enabled   │       ║
+    ║  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘       ║
+    ║           │ Snowpipe            │ Snowpipe            │ Snowpipe      ║
+    ╚═══════════╪═════════════════════╪═════════════════════╪════════════════╝
+                │                     │                     │
+    ╔═══════════╪═════════════════════╪═════════════════════╪════════════════╗
+    ║           ▼                     ▼                     ▼               ║
+    ║  SNOWFLAKE PLATFORM                                                   ║
+    ║                                                                       ║
+    ║  ┌───────────────────────────────────────────────────────────────┐    ║
+    ║  │                    DATA ARCHITECTURE                          │    ║
+    ║  │                                                               │    ║
+    ║  │  ┌─────────────┐  ──────────►  ┌─────────────┐  ─────────►  │    ║
+    ║  │  │  RAW Schema  │  Dynamic Tbl  │   CURATED   │  Dynamic Tbl │    ║
+    ║  │  │  ─────────── │  ~10 min lag  │  ─────────  │  ~5 min lag  │    ║
+    ║  │  │  Geneva raw  │               │  Star schema│              │    ║
+    ║  │  │  NetSuite raw│               │  DIM + FACT │              │    ║
+    ║  │  │  SF raw objs │               │  Conformed  │              │    ║
+    ║  │  │  ─────────── │               │  ─────────  │              │    ║
+    ║  │  │  Append-only │               │  Biz keys   │              │    ║
+    ║  │  └─────────────┘               └──────┬──────┘              │    ║
+    ║  │                                       │                      │    ║
+    ║  │                          ┌────────────▼────────────┐         │    ║
+    ║  │                          │    ANALYTICS Schema     │         │    ║
+    ║  │                          │    ─────────────────    │         │    ║
+    ║  │                          │    Semantic View        │         │    ║
+    ║  │                          │    Pre-built metrics    │         │    ║
+    ║  │                          │    P&L, profitability   │         │    ║
+    ║  │                          │    Consumption-ready    │         │    ║
+    ║  │                          └────────────┬────────────┘         │    ║
+    ║  └───────────────────────────────────────┼───────────────────────┘    ║
+    ║                                          │                            ║
+    ║  ┌───────────────────────────────────────┼───────────────────────┐    ║
+    ║  │              CORTEX AI LAYER (New)    │                       │    ║
+    ║  │                                       ▼                       │    ║
+    ║  │          ┌──────────────┐    ┌──────────────┐                │    ║
+    ║  │          │ Semantic View │───►│Cortex Analyst│                │    ║
+    ║  │          │ 395 properties│   │ Text-to-SQL  │                │    ║
+    ║  │          └──────────────┘    └──────┬───────┘                │    ║
+    ║  │                                     ▼                        │    ║
+    ║  │                            ┌──────────────┐                  │    ║
+    ║  │                            │  Snowflake   │                  │    ║
+    ║  │                            │ Intelligence │                  │    ║
+    ║  │                            └──────────────┘                  │    ║
+    ║  └──────────────────────────────────────────────────────────────┘    ║
+    ║                                                                       ║
+    ║  ┌──────────────────────────────────────────────────────────────┐    ║
+    ║  │  GOVERNANCE: Audit Trail │ RBAC + Masking │ SOC 2 Compliant │    ║
+    ║  └──────────────────────────────────────────────────────────────┘    ║
+    ╚═══════════════════════════════════════════════════════════════════════╝
+                │                        │                     │
+    ╔═══════════╪════════════════════════╪═════════════════════╪════════════╗
+    ║           ▼  CONSUMPTION LAYER     ▼                     ▼           ║
+    ║                                                                      ║
+    ║  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     ║
+    ║  │    Power BI      │  │   Snowflake     │  │    REST API     │     ║
+    ║  │   (Existing)     │  │  Intelligence   │  │    (Future)     │     ║
+    ║  │   ODBC/JDBC      │  │   (New)         │  │                 │     ║
+    ║  │   Finance team   │  │   NL Chat       │  │   Programmatic  │     ║
+    ║  │   < 1 sec        │  │   Executives    │  │   On-demand     │     ║
+    ║  │                  │  │   < 5 sec       │  │   < 2 sec       │     ║
+    ║  └─────────────────┘  └─────────────────┘  └─────────────────┘     ║
+    ╚══════════════════════════════════════════════════════════════════════╝
+
+  2. Bullet-Point Narrative
+
+  Opening: The Problem
+
+  • Today, Pinnacle has three core systems that don't talk to each other: Geneva for portfolio accounting,     
+  NetSuite for the general ledger, and Salesforce for client data
+  • Data lands in an 8-year-old SQL Server warehouse, then gets manually reconciled across 40+ spreadsheets by 
+  3 FTEs
+  • Month-end close takes 10 business days. Executives wait days for ad-hoc reports.
+
+  Layer 1: Data Sources -- What We're Connecting
+
+  • Geneva provides portfolio positions, NAV calculations, AUM, and transaction data -- the core of what we    
+  manage
+  • NetSuite provides the general ledger: GL entries, accounts payable/receivable, revenue, and expense records
+  • Salesforce Financial Services Cloud holds client accounts, AUM tracking, and relationship data
+  • These three systems remain in place. We're not replacing anything -- we're connecting them.
+
+  Layer 2: Ingestion -- How Data Gets Into Snowflake
+
+  • Geneva connects via scheduled SFTP batch extract, running daily at 6 AM ET. This is standard for portfolio 
+  accounting systems -- data is available within 15 minutes of export.
+  • NetSuite connects via Snowflake's native connector, syncing every 4 hours via API. About 30 minutes        
+  end-to-end.
+  • Salesforce connects via Snowflake's native connector with change data capture enabled -- near real-time,   
+  roughly 5-minute latency.
+  • All three land in Snowflake via Snowpipe, which auto-ingests files as they arrive. No manual ETL jobs to   
+  maintain.
+
+  Layer 3: Snowflake Platform -- Where the Magic Happens
+
+  • Data flows through three schema layers: RAW, CURATED, and ANALYTICS
+  • RAW is append-only and immutable -- we never modify source data. This is your audit trail for where every  
+  number came from.
+  • CURATED contains the cleansed star schema: dimension tables for clients, products, dates, expense
+  categories, GL accounts, cost centers, plus fact tables for revenue and expenses. Dynamic Tables refresh     
+  incrementally -- about 10 minutes behind RAW.
+  • ANALYTICS is the consumption layer: the semantic view with 395 properties, pre-built metrics for P&L,      
+  profitability, and client analysis. About 5 minutes behind CURATED.
+  • On top of ANALYTICS sits the Cortex AI layer: the Semantic View defines business terms, Cortex Analyst     
+  translates plain English to SQL, and Snowflake Intelligence provides the chat interface.
+  • Governance is built in throughout: full audit trail, role-based access control with column masking for PII,
+   SOC 2 compliant infrastructure with encryption at rest and in transit.
+
+  Layer 4: Consumption -- How People Access the Data
+
+  • Power BI continues to work as-is. The finance team keeps their existing dashboards -- they just point at   
+  Snowflake instead of SQL Server. Sub-second query response via ODBC.
+  • Snowflake Intelligence is the new channel. Margaret can type "What is our profit margin by quarter?" and   
+  get an answer in under 5 seconds, with the SQL visible for David to verify.
+  • REST API access is available for future integrations -- programmatic, on-demand, under 2 seconds.
+
+  Closing: What This Means
+
+  • End-to-end latency from source system change to executive dashboard: under 35 minutes for Geneva data,     
+  under 20 minutes for Salesforce data
+  • No manual reconciliation -- Dynamic Tables replace the work of 3 FTEs
+  • Every answer is governed, auditable, and traces back to source
+
+  3. Executive Summary
+
+  Pinnacle's proposed Snowflake architecture connects Geneva, NetSuite, and Salesforce into a single governed  
+  data platform using native connectors and automated ingestion, eliminating the manual reconciliation that    
+  currently consumes 3 FTEs and causes 10-day month-end close cycles. Data flows through three layers -- RAW   
+  (immutable source records), CURATED (conformed star schema), and ANALYTICS (semantic view with 395 pre-built 
+  metrics) -- with end-to-end latency under 35 minutes, replacing the days-long reporting cycle. Executives    
+  gain self-service access through Snowflake Intelligence, a natural language chat interface backed by Cortex  
+  Analyst, while the existing Power BI dashboards continue to function unchanged. The entire platform is SOC 2 
+  compliant with role-based access control, PII masking, and a full audit trail for every query and data access
+   event.

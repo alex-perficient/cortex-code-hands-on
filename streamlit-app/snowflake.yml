@@ -1,0 +1,11 @@
+definition_version: 2
+entities:
+  pinnacle_financial_dashboard:
+    type: streamlit
+    identifier:
+      name: PINNACLE_FINANCIAL_DASHBOARD
+    title: "Pinnacle Financial Analytics"
+    query_warehouse: COCO_HOL_WH
+    main_file: streamlit_app.py
+    pages_dir: pages/
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
