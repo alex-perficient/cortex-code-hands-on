@@ -1,8 +1,8 @@
 -- Pinnacle Financial Services - Financial Analytics POC Schema
 -- Designed for: Revenue analytics, Expense tracking, Client profitability
 
-CREATE SCHEMA IF NOT EXISTS COCO_HOL_DB.FINANCE_ANALYTICS;
-USE SCHEMA COCO_HOL_DB.FINANCE_ANALYTICS;
+CREATE SCHEMA IF NOT EXISTS PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS;
+USE SCHEMA PINNACLE_FINANCIAL_DEMO_33.FINANCE_ANALYTICS;
 
 -- ============================================
 -- DIMENSION TABLES

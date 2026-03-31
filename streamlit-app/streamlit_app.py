@@ -12,27 +12,45 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
-# Snowflake connection
+# Snowflake connection — works both locally and inside Snowsight
 # ---------------------------------------------------------------------------
 DB = "PINNACLE_FINANCIAL_DEMO_33"
 SCHEMA = "FINANCE_ANALYTICS"
 
 
-def get_snowflake_connection():
-    """Return a Snowflake connection, or show an error and stop."""
+def _is_running_in_snowsight() -> bool:
+    """Return True when the app is running inside Snowflake (Snowsight)."""
     try:
-        return st.connection("snowflake")
-    except Exception as exc:
-        st.error(f"Could not connect to Snowflake: {exc}")
-        st.stop()
+        from snowflake.snowpark.context import get_active_session
+        get_active_session()
+        return True
+    except Exception:
+        return False
 
 
-conn = get_snowflake_connection()
+IS_SNOWSIGHT = _is_running_in_snowsight()
+
+if IS_SNOWSIGHT:
+    from snowflake.snowpark.context import get_active_session
+    session = get_active_session()
+else:
+    def _get_local_connection():
+        """Return a local Snowflake connection, or show an error and stop."""
+        try:
+            return st.connection("snowflake")
+        except Exception as exc:
+            st.error(f"Could not connect to Snowflake: {exc}")
+            st.stop()
+
+    conn = _get_local_connection()
 
 
 def run_query(sql: str) -> pd.DataFrame:
-    """Run *sql* via the cached Snowflake connection and lower-case columns."""
-    df = conn.query(sql, ttl=600)
+    """Run *sql* and return a DataFrame with lower-cased column names."""
+    if IS_SNOWSIGHT:
+        df = session.sql(sql).to_pandas()
+    else:
+        df = conn.query(sql, ttl=600)
     df.columns = df.columns.str.lower()
     return df
 
