@@ -1,0 +1,11 @@
+[project]
+name = "fidelity-app"
+version = "1.0.0"
+description = "Fidelity App — Streamlit app powered by Snowflake"
+requires-python = ">=3.11"
+dependencies = [
+    "altair>=5.5.0,<=5.5.0",
+    "pandas>=2.2.3,<=2.2.3",
+    "snowflake-snowpark-python>=1.48.0",
+    "streamlit>=1.52.0,<=1.52.2",
+]
