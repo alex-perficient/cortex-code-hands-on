@@ -1,0 +1,4 @@
+-- ============================================================================
+-- DEPRECATED: This file has been superseded by the sql/ folder.
+-- See sql/run_all.sql for the full list of DDL scripts in execution order.
+-- ============================================================================

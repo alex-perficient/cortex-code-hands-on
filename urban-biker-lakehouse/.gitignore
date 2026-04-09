@@ -1,0 +1,17 @@
+# Environments y credenciales
+.env
+.venv
+env/
+venv/
+.certs/
+
+# Datos y archivos temporales
+*.parquet
+*.csv
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
