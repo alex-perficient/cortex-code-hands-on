@@ -61,3 +61,11 @@
 -- │ File: sql/03_gold/streamlit.sql                                        │
 -- │ Creates: GOLD.BICIMAD_DASHBOARD (Streamlit in Snowflake)               │
 -- └─────────────────────────────────────────────────────────────────────────┘
+
+-- ┌─────────────────────────────────────────────────────────────────────────┐
+-- │ STEP 9 — Automation: Scheduled Hourly Ingestion Task                   │
+-- │ File: sql/04_automation/tasks.sql                                      │
+-- │ Creates: RAW.TASK_HOURLY_INGESTION                                     │
+-- │ Runs:    Every hour — COPY INTO from S3 + CALL SP_CLEAN_BIKE_STATIONS  │
+-- │ NOTE:    Gold Dynamic Tables auto-refresh from Silver automatically.   │
+-- └─────────────────────────────────────────────────────────────────────────┘

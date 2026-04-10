@@ -10,7 +10,7 @@
               "--service-config-file",
               "C:/Users/alejandro.pedrero/cortex-code-hands-on/tools_config.yaml",
               "--connection-name",
-              "default",
+              "COCO_HOL_ACCOUNT",
             ],
           "env": { "SNOWFLAKE_PASSWORD": "${SNOWFLAKE_PASSWORD}" },
         },

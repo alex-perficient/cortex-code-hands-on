@@ -1,0 +1,12 @@
+definition_version: '2'
+entities:
+  my_usage_dashboard:
+    type: streamlit
+    identifier:
+      name: MY_USAGE_DASHBOARD
+    title: "My Usage Dashboard"
+    query_warehouse: COCO_HOL_WH
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - environment.yml
