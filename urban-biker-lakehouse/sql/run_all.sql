@@ -22,7 +22,7 @@
 -- ┌─────────────────────────────────────────────────────────────────────────┐
 -- │ STEP 3 — Bronze: Stages & Initial Load                                 │
 -- │ File: sql/01_raw/stages.sql                                            │
--- │ Creates: RAW.CITYBIKES_STG, RAW.BIKE_STAGE_S3                          │
+-- │ Creates: RAW.BIKE_STAGE_S3                                             │
 -- │ Runs:    COPY INTO to load Parquet data from S3                        │
 -- │ NOTE:    Update AWS credentials before running.                        │
 -- └─────────────────────────────────────────────────────────────────────────┘

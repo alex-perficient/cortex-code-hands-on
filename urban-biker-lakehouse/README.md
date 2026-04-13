@@ -5,13 +5,11 @@ Medallion-architecture data lakehouse on Snowflake for analyzing **BiciMAD** (Ma
 ## Architecture
 
 ```
-CityBikes API (bicimad)
+  Windows Task Scheduler (every hour at :50)
         |
         v
-  extract_data.py        --> Parquet file (local)
-        |
-        v
-      AWS S3              --> s3://citybikes-stg/citybikes_parquet/
+  extract_data.py        --> CityBikes API --> Parquet --> AWS S3
+                              s3://citybikes-stg/citybikes_parquet/
         |
         v
   ┌─── TASK_HOURLY_INGESTION (CRON 0 * * * * UTC) ───┐
@@ -40,14 +38,13 @@ urban-biker-lakehouse/
 │   └── environment.yml             # Conda env for Streamlit in Snowflake
 ├── scripts/
 │   ├── extract_data.py             # CityBikes API -> Parquet -> S3
-│   ├── load_data.py                # S3 stage -> RAW table via COPY INTO
-│   └── generate_keypair.py         # RSA key pair for Snowflake auth
+│   └── run_extract.ps1             # PowerShell wrapper for Task Scheduler
 └── sql/
     ├── run_all.sql                 # Step-by-step orchestration guide
     ├── 00_setup.sql                # Database + schema creation
     ├── 01_raw/
     │   ├── tables.sql              # BIKE_STATIONS_RAW table
-    │   └── stages.sql              # Internal + S3 external stages, COPY INTO
+    │   └── stages.sql              # S3 external stage, initial COPY INTO
     ├── 02_silver/
     │   ├── tables.sql              # BIKE_STATIONS table (typed columns)
     │   └── procedures.sql          # SP_CLEAN_BIKE_STATIONS (MERGE)
@@ -64,7 +61,6 @@ urban-biker-lakehouse/
 | Schema | Object | Type |
 |--------|--------|------|
 | RAW | BIKE_STATIONS_RAW | Table |
-| RAW | CITYBIKES_STG | Internal Stage |
 | RAW | BIKE_STAGE_S3 | External Stage (S3) |
 | SILVER | BIKE_STATIONS | Table |
 | SILVER | SP_CLEAN_BIKE_STATIONS | Stored Procedure |
@@ -102,14 +98,19 @@ The Streamlit app (`GOLD.BICIMAD_DASHBOARD`) runs natively in Snowflake and prov
 
 ## Future Steps - ETL Automation
 
-The Snowflake-side pipeline is now automated: `TASK_HOURLY_INGESTION` runs every hour, executing `COPY INTO` from S3 and calling `SP_CLEAN_BIKE_STATIONS`. Gold Dynamic Tables auto-refresh from Silver. The only manual step remaining is running `extract_data.py` to push new snapshots to S3.
+The full pipeline is now automated end-to-end:
+
+- **Windows Task Scheduler** (`CityBikes_Extract_Hourly`): runs `extract_data.py` every hour at minute :50, fetching data from the CityBikes API and uploading Parquet files to S3.
+- **Snowflake Task** (`TASK_HOURLY_INGESTION`): runs every hour at minute :00, executing `COPY INTO` from S3 and calling `SP_CLEAN_BIKE_STATIONS` to MERGE into Silver.
+- **Gold Dynamic Tables**: auto-refresh from Silver with a 1-hour target lag.
 
 Completed:
 
 - [x] **Snowflake Task for hourly ingestion + Silver refresh**: `RAW.TASK_HOURLY_INGESTION` runs `COPY INTO` from S3 and calls `SP_CLEAN_BIKE_STATIONS` every hour on a CRON schedule.
+- [x] **Scheduled extraction via Windows Task Scheduler**: `CityBikes_Extract_Hourly` runs `extract_data.py` every hour at :50 to fetch API snapshots and push to S3.
 
 Remaining:
 
-- [ ] **Scheduled extraction with external orchestration**: Automate `extract_data.py` on a schedule (e.g., cron job, AWS Lambda, or GitHub Actions) to continuously fetch snapshots from the CityBikes API and push to S3.
+- [ ] **Migrate extraction to Snowflake**: Replace Windows Task Scheduler with a Snowflake Python stored procedure + External Access Integration (requires ACCOUNTADMIN).
 - [ ] **Alerts and monitoring**: Add Snowflake Alerts to detect pipeline failures (e.g., no new data in X hours, SP execution errors) and notify via email or webhook.
 - [ ] **Git Integration for Streamlit deployment**: Connect the repository to Snowflake Git Integration so app updates deploy automatically on push.

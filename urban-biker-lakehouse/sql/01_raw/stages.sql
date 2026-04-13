@@ -1,15 +1,11 @@
 -- ============================================================================
 -- 01_raw/stages.sql
--- Bronze layer: internal and external stages for data landing.
+-- Bronze layer: external stage for data landing from S3.
 -- ============================================================================
 
 USE ROLE COCO_HOL_RL;
 USE DATABASE URBAN_BIKER_DB_33;
 USE SCHEMA RAW;
-
--- Internal stage for manual Parquet uploads
-CREATE OR REPLACE STAGE CITYBIKES_STG
-    DIRECTORY = (ENABLE = TRUE);
 
 -- External stage pointing to the S3 landing zone
 -- NOTE: Replace <your_aws_key_id> and <your_aws_secret_key> with real credentials.

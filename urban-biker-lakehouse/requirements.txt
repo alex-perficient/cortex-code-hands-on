@@ -2,8 +2,6 @@
 requests
 pandas
 pyarrow
-fastparquet
-snowflake-connector-python
 python-dotenv
 boto3
 streamlit
