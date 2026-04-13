@@ -52,8 +52,10 @@ urban-biker-lakehouse/
     │   ├── dynamic_tables.sql      # DT_NETWORK_SUMMARY, DT_STATION_HOURLY_METRICS
     │   ├── stages.sql              # STREAMLIT_STAGE (for app files)
     │   └── streamlit.sql           # BICIMAD_DASHBOARD definition
-    └── 04_automation/
-        └── tasks.sql               # TASK_HOURLY_INGESTION (scheduled COPY + SP)
+    ├── 04_automation/
+    │   └── tasks.sql               # TASK_HOURLY_INGESTION (scheduled COPY + SP)
+    └── 05_tests/
+        └── data_quality.sql        # DMFs: null checks, duplicate detection, schedules
 ```
 
 ## Snowflake Objects
@@ -69,6 +71,8 @@ urban-biker-lakehouse/
 | GOLD | STREAMLIT_STAGE | Internal Stage |
 | GOLD | BICIMAD_DASHBOARD | Streamlit App |
 | RAW | TASK_HOURLY_INGESTION | Task (hourly CRON) |
+| RAW | DMF_NULL_VARIANT_COUNT | Data Metric Function (custom) |
+| RAW | DMF_DUPLICATE_RAW_COUNT | Data Metric Function (custom) |
 
 ## Data Layers
 
@@ -88,6 +92,23 @@ The Streamlit app (`GOLD.BICIMAD_DASHBOARD`) runs natively in Snowflake and prov
 - Top 10 / Bottom 10 stations by occupancy (bar charts)
 - Network occupancy time series (requires multiple extraction snapshots)
 - Raw data explorer
+
+## Data Quality
+
+Data quality is monitored using **Snowflake Data Metric Functions (DMFs)** attached to tables across all three layers. DMFs run automatically on `TRIGGER_ON_CHANGES` — each time a table is modified, the attached metrics are re-evaluated.
+
+| Layer | Table | DMF | Column(s) | Detects |
+|-------|-------|-----|-----------|---------|
+| Bronze | BIKE_STATIONS_RAW | `DMF_NULL_VARIANT_COUNT` (custom) | RAW_DATA | Corrupt/empty records |
+| Bronze | BIKE_STATIONS_RAW | `SNOWFLAKE.CORE.NULL_COUNT` | FILENAME | COPY INTO without metadata |
+| Bronze | BIKE_STATIONS_RAW | `DMF_DUPLICATE_RAW_COUNT` (custom) | RAW_DATA, FILENAME, INGESTION_TIME | Duplicate file loads |
+| Silver | BIKE_STATIONS | `SNOWFLAKE.CORE.NULL_COUNT` | STATION_ID, LATITUDE, LONGITUDE | Missing critical fields |
+| Silver | BIKE_STATIONS | `SNOWFLAKE.CORE.DUPLICATE_COUNT` | STATION_ID | Duplicates post-MERGE |
+| Gold | DT_NETWORK_SUMMARY | `SNOWFLAKE.CORE.NULL_COUNT` | TOTAL_STATIONS, NETWORK_OCCUPANCY_PCT | Dynamic table refresh issues |
+
+Verify attached DMFs with `INFORMATION_SCHEMA.DATA_METRIC_FUNCTION_REFERENCES()`. Run DMFs manually with `SELECT DMF_NAME(SELECT cols FROM table)`.
+
+> **Note**: `SNOWFLAKE.CORE.FRESHNESS` requires `TIMESTAMP_LTZ` columns. Since this project uses `TIMESTAMP_NTZ`, freshness is validated indirectly via `TASK_HISTORY` and Dynamic Table target lag monitoring.
 
 ## Completed Steps
 

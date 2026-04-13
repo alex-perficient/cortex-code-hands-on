@@ -69,3 +69,11 @@
 -- │ Runs:    Every hour — COPY INTO from S3 + CALL SP_CLEAN_BIKE_STATIONS  │
 -- │ NOTE:    Gold Dynamic Tables auto-refresh from Silver automatically.   │
 -- └─────────────────────────────────────────────────────────────────────────┘
+
+-- ┌─────────────────────────────────────────────────────────────────────────┐
+-- │ STEP 10 — Data Quality: Data Metric Functions (DMFs)                   │
+-- │ File: sql/05_tests/data_quality.sql                                    │
+-- │ Creates: RAW.DMF_NULL_VARIANT_COUNT, RAW.DMF_DUPLICATE_RAW_COUNT      │
+-- │ Attaches: SNOWFLAKE.CORE.NULL_COUNT, DUPLICATE_COUNT to Bronze/Silver │
+-- │ Schedule: TRIGGER_ON_CHANGES (evaluated when tables change)           │
+-- └─────────────────────────────────────────────────────────────────────────┘

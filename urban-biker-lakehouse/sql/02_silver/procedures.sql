@@ -34,6 +34,10 @@ BEGIN
         WHERE raw_data:"latitude" IS NOT NULL
           AND raw_data:"longitude" IS NOT NULL
           AND raw_data:"extra.slots"::INT > 0
+        QUALIFY ROW_NUMBER() OVER (
+            PARTITION BY raw_data:"id"::STRING, raw_data:"extraction_at"::TIMESTAMP_NTZ
+            ORDER BY INGESTION_TIME DESC
+        ) = 1
     ) AS src
     ON tgt.station_id = src.station_id AND tgt.extraction_at = src.extraction_at
     WHEN MATCHED THEN UPDATE SET
